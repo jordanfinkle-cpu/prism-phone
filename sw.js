@@ -1,7 +1,7 @@
 // Prism phone app — minimal shell cache. Network-first so deploys show up on
 // next launch; cache fallback keeps the app opening offline. Supabase calls
 // are cross-origin and never touched.
-const V = 'prism-phone-v4';
+const V = 'prism-phone-v5';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
                './icon-180.png', './icon-192.png', './icon-512.png'];
 

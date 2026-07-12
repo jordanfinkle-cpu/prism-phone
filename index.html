@@ -74,25 +74,19 @@ svg{display:block}
 .sec-h.later{padding-top:22px}
 .card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;
   margin:0 16px;overflow:hidden}
-.row{display:flex;align-items:center;gap:13px;width:100%;padding:14px 15px;text-align:left}
+.row{display:flex;align-items:center;gap:13px;width:100%;padding:10px 15px;text-align:left}
 .row:active{background:rgba(0,0,0,.03)}
 .row + .row{border-top:1px solid rgba(0,0,0,.05);}
-.row .doc{width:38px;height:38px;border-radius:10px;background:var(--chip);flex:none;
-  display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .row .mid{flex:1;min-width:0}
-.row .t{display:block;font-size:16px;font-weight:500;color:var(--ink);white-space:nowrap;
+.row .t{display:block;font-size:14.5px;font-weight:500;color:var(--ink);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.row .chip{display:inline-block;font-size:12px;color:var(--muted);background:var(--chip);
-  border-radius:6px;padding:2px 8px;margin-top:3px;max-width:100%;white-space:nowrap;
+.row .chip{display:inline-block;font-size:11px;color:var(--muted);background:var(--chip);
+  border-radius:5px;padding:1.5px 6px;margin-top:2.5px;max-width:100%;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.row .when{font-size:13px;color:var(--faint2);flex:none}
+.row .when{font-size:12px;color:var(--faint2);flex:none}
 .center-note{padding-top:60px;text-align:center}
 .center-note .a{font-size:16px;font-weight:600}
 .center-note .b{font-size:13px;color:var(--faint);margin-top:6px}
-#fab{position:fixed;right:22px;bottom:calc(30px + env(safe-area-inset-bottom));
-  width:58px;height:58px;border-radius:19px;background:var(--ink);color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 10px 13px rgba(0,0,0,.32);display:none}
 #menu{position:fixed;top:calc(44px + env(safe-area-inset-top));right:14px;z-index:30;
   background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;
   box-shadow:0 12px 32px rgba(0,0,0,.14);padding:6px;min-width:210px;display:none}
@@ -109,7 +103,7 @@ svg{display:block}
 #detail.open{transform:translateX(0);box-shadow:-18px 0 40px rgba(0,0,0,.07)}
 .d-top{display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 12px 6px}
 .back{display:flex;align-items:center;gap:2px;color:var(--ink);font-size:16px;padding:6px 8px}
-.d-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:140px}
+.d-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:44px}
 .d-meta{font-size:12.5px;color:var(--faint);padding:4px 22px 0}
 .d-title{font-size:26px;font-weight:700;line-height:1.25;padding:8px 22px 0}
 /* segmented note tabs — same control as the Mac's note view */
@@ -137,7 +131,7 @@ svg{display:block}
 .ph-h{display:flex;align-items:center;padding:20px 24px 11px}
 .ph-h .lab{color:var(--muted)}
 .ph-h .add{margin-left:auto;display:flex;align-items:center;gap:4px;
-  color:var(--accent);font-size:13.5px;font-weight:600}
+  color:var(--ink);font-size:13.5px;font-weight:600}
 .ph-empty{display:block;width:calc(100% - 44px);margin:0 22px;padding:26px 20px;
   border-radius:15px;text-align:center;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='15' fill='none' stroke='rgba(0,0,0,.14)' stroke-width='1.5' stroke-dasharray='6 5'/%3E%3C/svg%3E")}
@@ -151,12 +145,9 @@ svg{display:block}
 .tile img{width:100%;height:100%;object-fit:cover;display:block}
 .tile .x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
   background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center}
-.tile .ok{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
-  background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center}
-.tile .ok svg{width:11px;height:11px}
 .tile.ghost{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
   background:var(--chip);color:var(--muted);font-size:11px;font-weight:500}
-.tile.ghost svg{width:14px;height:14px}
+.tile.ghost > svg{width:14px;height:14px}
 .ph-load{display:flex;justify-content:center;padding:18px 0}
 .ph-load .spin{width:16px;height:16px;border-color:rgba(0,0,0,.12);border-top-color:var(--muted)}
 .tile .busy{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;
@@ -169,17 +160,8 @@ svg{display:block}
 .tile.addt{border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:6px;color:var(--faint);font-size:12px;font-weight:500;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='13' fill='none' stroke='rgba(0,0,0,.16)' stroke-width='1.5' stroke-dasharray='6 5'/%3E%3C/svg%3E")}
-.toolbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:26px;
-  padding:12px 22px calc(14px + env(safe-area-inset-bottom));
-  background:rgba(251,251,250,.82);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
-  border-top:1px solid rgba(0,0,0,.06)}
-.tb-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:600}
-.tb-btn.cam{color:var(--accent)}
-.tb-btn.lib{color:var(--muted);font-weight:500}
-.tb-done{margin-left:auto;font-size:16px;font-weight:600;color:var(--ink)}
-
 /* ---------------- shared ---------------- */
-#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));z-index:50;
+#toast{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));z-index:50;
   transform:translate(-50%,20px);display:flex;align-items:center;gap:9px;
   background:rgba(0,0,0,.92);color:#fff;font-size:14px;font-weight:500;
   padding:11px 18px;border-radius:13px;opacity:0;pointer-events:none;
@@ -225,7 +207,6 @@ svg{display:block}
       <input id="searchIn" placeholder="Search notes & photos" autocapitalize="none" autocorrect="off"></div>
     <div id="listBody"></div>
   </div>
-  <button id="fab" aria-label="Add photos to your latest note"></button>
 </div>
 <div id="menuVeil"></div>
 <div id="menu"><div class="email" id="menuEmail"></div><button class="out" id="signOutBtn">Sign out</button></div>
@@ -253,15 +234,9 @@ svg{display:block}
       <button class="add" id="addBtn"><span id="plusIconS"></span>Add</button></div>
     <div id="phZone"></div>
   </div>
-  <div class="toolbar">
-    <button class="tb-btn cam" id="camBtn"><span id="camIcon2"></span>Camera</button>
-    <button class="tb-btn lib" id="libBtn"><span id="libIcon"></span>Library</button>
-    <button class="tb-done" id="doneBtn">Done</button>
-  </div>
 </div>
 
 <div id="toast"><span id="toastIcon"></span><span id="toastText"></span></div>
-<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 <input type="file" id="libIn" accept="image/*" multiple hidden>
 
 <script>
@@ -278,11 +253,9 @@ const SAMPLE = new URLSearchParams(location.search).get('sample') === '1';
 const I = {
   mark : s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="#1A1A19"><path d="M12 3.6c.62 0 1.19.33 1.5.87l7.55 13.06c.62 1.07-.15 2.41-1.39 2.41H4.34c-1.24 0-2.01-1.34-1.39-2.41L10.5 4.47c.31-.54.88-.87 1.5-.87z"/></svg>`,
   mag  : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2 20 20"/></svg>`,
-  doc  : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>`,
   person:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="10" r="3.1"/><path d="M5.8 18.6c1.1-2.6 3.4-4 6.2-4s5.1 1.4 6.2 4" stroke-linecap="round"/></svg>`,
   refresh:`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5A8.1 8.1 0 0 0 5.6 7.4L4 9.2"/><path d="M4 4.8v4.4h4.4"/><path d="M4 12.5a8.1 8.1 0 0 0 14.4 4.1l1.6-1.8"/><path d="M20 19.2v-4.4h-4.4"/></svg>`,
   cam  : (s,w) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.2a2 2 0 0 1 2-2h1.6l1.2-1.8a1.6 1.6 0 0 1 1.3-.7h4.8a1.6 1.6 0 0 1 1.3.7l1.2 1.8h1.6a2 2 0 0 1 2 2v9.1a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.6" r="3.4"/></svg>`,
-  lib  : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="14.5" height="12.5" rx="2"/><path d="M20.5 8.5v7.5a2.5 2.5 0 0 1-2.5 2.5"/><path d="m3.9 15.5 3.6-3.5a1.4 1.4 0 0 1 2 0l4.9 4.9"/><circle cx="13.6" cy="9.6" r="1.3" fill="currentColor" stroke="none"/></svg>`,
   plus : (s,w) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
   x    : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M5 5l14 14M19 5 5 19"/></svg>`,
   chev : `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5 8 12l6.5 7"/></svg>`,
@@ -291,8 +264,8 @@ const I = {
 };
 loginMark.innerHTML = I.mark(46); brandMark.innerHTML = I.mark(17);
 magIcon.innerHTML = I.mag; acctBtn.innerHTML = I.person; refreshBtn.innerHTML = I.refresh;
-fab.innerHTML = I.cam(25, 2); chevIcon.innerHTML = I.chev; plusIconS.innerHTML = I.plus(13, 2.6);
-camIcon2.innerHTML = I.cam(23, 1.8); libIcon.innerHTML = I.lib; toastIcon.innerHTML = I.check;
+chevIcon.innerHTML = I.chev; plusIconS.innerHTML = I.plus(13, 2.6);
+toastIcon.innerHTML = I.check;
 
 /* ---- session (localStorage = the phone's keychain) -------------------- */
 let S = { access:'', refresh:'', exp:0, email:'', uid:'' };
@@ -452,13 +425,15 @@ async function fetchScans(callId){
              rowId: row.id, claimed: !!row.claimed_at };
   }));
 }
+/// Deleting the inbox row is the "remove everywhere" signal: the Mac spots
+/// the vanished row on its next sync cycle and removes the ingested scan too.
 async function removeScan(rowId){
   if (SAMPLE) return true;
-  const r = await api(`/rest/v1/scan_inbox?id=eq.${rowId}&claimed_at=is.null&select=storage_path`,
+  const r = await api(`/rest/v1/scan_inbox?id=eq.${rowId}&select=storage_path`,
     { method:'DELETE', headers: { Prefer: 'return=representation' }});
-  const path = r.code === 200 && r.data && r.data[0] && r.data[0].storage_path;
-  if (!path) return false;
-  api('/storage/v1/object/scans/' + path, { method:'DELETE' });
+  if (r.code !== 200 || !Array.isArray(r.data) || !r.data[0]) return false;
+  const path = r.data[0].storage_path;
+  if (path) api('/storage/v1/object/scans/' + path, { method:'DELETE' });
   return true;
 }
 function sampleNotes(){
@@ -560,14 +535,13 @@ function renderList(){
     h = '<div class="center-note"><div class="b">Nothing matches your search.</div></div>';
   else {
     const card = rows => '<div class="card">' + rows.map(n =>
-      `<button class="row" data-id="${n.id}"><span class="doc">${I.doc}</span>` +
+      `<button class="row" data-id="${n.id}">` +
       `<span class="mid"><span class="t">${esc(n.title)}</span><span class="chip">${esc(n.folder)}</span></span>` +
       `<span class="when">${when(n.at)}</span></button>`).join('') + '</div>';
     if (today.length)   h += '<div class="sec-h">Today</div>' + card(today);
     if (earlier.length) h += `<div class="sec-h${today.length ? ' later' : ''}">${today.length ? 'Earlier' : 'Notes'}</div>` + card(earlier);
   }
   listBody.innerHTML = h;
-  fab.style.display = notes.length ? 'flex' : 'none';
   listBody.querySelectorAll('.row').forEach(b =>
     b.onclick = () => { const n = notes.find(x => x.id === b.dataset.id); if (n) openDetail(n); });
 }
@@ -579,7 +553,6 @@ async function loadNotes(){
 }
 searchIn.addEventListener('input', renderList);
 refreshBtn.onclick = async () => { refreshBtn.style.opacity = .4; await loadNotes(); refreshBtn.style.opacity = ''; };
-fab.onclick = () => { if (notes[0]) openDetail(notes[0]); };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { if (isDirty()) saveMyNow(); return; }   // app going away → flush
   if (signedIn() && loadedOnce) { loadNotes(); refreshOpenNote(); }
@@ -688,7 +661,7 @@ function closeDetail(){
   detail.classList.remove('open'); views.list.classList.remove('pushed');
 }
 function goBack(){ if (history.state && history.state.note) history.back(); else closeDetail(); }
-backBtn.onclick = goBack; doneBtn.onclick = goBack;
+backBtn.onclick = goBack;
 window.addEventListener('popstate', () => { if (detail.classList.contains('open')) closeDetail(); });
 
 function renderPhotos(){
@@ -701,22 +674,24 @@ function renderPhotos(){
     return;
   }
   phZone.innerHTML = '<div class="grid">' + photos.map(p => {
-    if (!p.url) return `<div class="tile ghost">${I.check}<span>On your Mac</span></div>`;
-    let badge;
+    const x = `<button class="x" data-k="${p.key}">${I.x}</button>`;
+    if (!p.url) return `<div class="tile ghost">${x}${I.check}<span>On your Mac</span></div>`;
+    let badge = x;
     if (p.rowId === null) badge = '<span class="busy"><span class="spin"></span></span>';
     else if (p.rowId === '') badge = `<span class="warn">${I.warn}</span>`;
-    else if (p.claimed) badge = `<span class="ok" title="Added on your Mac">${I.check}</span>`;
-    else badge = `<button class="x" data-k="${p.key}">${I.x}</button>`;
     return `<div class="tile"><img src="${p.url}" alt="">${badge}</div>`;
   }).join('') + `<button class="tile addt" id="gridAdd">${I.plus(20, 2)}Add</button></div>`;
   document.getElementById('gridAdd').onclick = () => libIn.click();
-  phZone.querySelectorAll('.x').forEach(b => b.onclick = async () => {
+  phZone.querySelectorAll('.x').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
     const p = photos.find(x => x.key === +b.dataset.k);
-    if (!p || !p.rowId || p.claimed) return;
+    if (!p || !p.rowId) return;
+    if (p.claimed && !confirm('This photo is already in the note on your Mac — delete it there too?')) return;
     if (await removeScan(p.rowId)) {
-      URL.revokeObjectURL(p.url);
+      if (p.url) URL.revokeObjectURL(p.url);
       photos = photos.filter(x => x !== p); renderPhotos();
-    } else toast('Already added on your Mac');
+      if (p.claimed) toast('Removed — your Mac will update shortly');
+    } else toast("Couldn't remove — try again");
   });
 }
 async function addFiles(files){
@@ -740,10 +715,7 @@ async function addFiles(files){
   }
   toast(ok === 0 ? 'Upload failed — try again' : `${ok} photo${ok === 1 ? '' : 's'} sent to your Mac`);
 }
-camBtn.onclick = () => camIn.click();
-libBtn.onclick = () => libIn.click();
 addBtn.onclick = () => libIn.click();
-camIn.onchange = () => { addFiles(camIn.files); camIn.value = ''; };
 libIn.onchange = () => { addFiles(libIn.files); libIn.value = ''; };
 
 /* ---- boot ------------------------------------------------------------------ */
