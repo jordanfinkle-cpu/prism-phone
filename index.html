@@ -338,8 +338,10 @@ async function fetchNotes(){
   return r.data.map(row => {
     const meta = row.meta || {};
     const at = row.started_at ? new Date(row.started_at) : null;
+    // same rule as the Mac's list: the AI-enriched display_title wins,
+    // otherwise the folder name minus its date suffix
     return { id: row.id,
-             title: meta.title || titleFromFolder(row.folder_name || ''),
+             title: meta.display_title || meta.title || titleFromFolder(row.folder_name || ''),
              folder: meta.collection || 'Notes',
              at: at && !isNaN(at) ? at : null };
   }).filter(n => n.id);
