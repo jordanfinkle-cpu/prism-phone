@@ -145,6 +145,14 @@ svg{display:block}
 .tile img{width:100%;height:100%;object-fit:cover;display:block}
 .tile .x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
   background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center}
+.tile .ok{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center}
+.tile .ok svg{width:11px;height:11px}
+.tile.ghost{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  background:var(--chip);color:var(--muted);font-size:11px;font-weight:500}
+.tile.ghost svg{width:14px;height:14px}
+.ph-load{display:flex;justify-content:center;padding:18px 0}
+.ph-load .spin{width:16px;height:16px;border-color:rgba(0,0,0,.12);border-top-color:var(--muted)}
 .tile .busy{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;
   background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
 .tile .warn{position:absolute;top:6px;right:6px;color:#f5c211;font-size:15px;
@@ -328,6 +336,14 @@ async function api(path, opts = {}){
   opts.headers = { Authorization: 'Bearer ' + S.access, ...(opts.headers || {}) };
   return raw(path, opts);
 }
+async function apiBlob(path){
+  await refreshIfNeeded();
+  if (!S.access) return null;
+  try {
+    const r = await fetch(BASE + path, { headers: { apikey: ANON, Authorization: 'Bearer ' + S.access }});
+    return r.ok ? await r.blob() : null;
+  } catch { return null; }
+}
 
 /* ---- data ------------------------------------------------------------ */
 function titleFromFolder(f){
@@ -376,6 +392,19 @@ async function uploadScan(callId, blob){
     headers: { Prefer: 'return=representation' }});
   if (ins.code !== 201 || !ins.data || !ins.data[0] || !ins.data[0].id) return null;
   return ins.data[0].id;
+}
+/// Every photo ever sent to this note. Unclaimed rows still have their image
+/// in storage; rows the Mac ingested before 07-12 had the object deleted, so
+/// they render as an "On your Mac" tile.
+async function fetchScans(callId){
+  if (SAMPLE) return callId === 's3' ? [{ key: ++seq, url: null, rowId: 'sx', claimed: true }] : [];
+  const r = await api(`/rest/v1/scan_inbox?call_id=eq.${callId}&select=id,storage_path,claimed_at&order=created_at.asc`);
+  if (r.code !== 200 || !Array.isArray(r.data)) return [];
+  return Promise.all(r.data.map(async row => {
+    const blob = await apiBlob('/storage/v1/object/scans/' + row.storage_path);
+    return { key: ++seq, url: blob ? URL.createObjectURL(blob) : null,
+             rowId: row.id, claimed: !!row.claimed_at };
+  }));
 }
 async function removeScan(rowId){
   if (SAMPLE) return true;
@@ -543,13 +572,13 @@ async function openDetail(n){
   dTitle.textContent = n.title;
   prismBody.innerHTML = ''; myBody.innerHTML = '';
   switchTab('prism');
-  renderPhotos();
+  phZone.innerHTML = '<div class="ph-load"><div class="spin"></div></div>';
   requestAnimationFrame(() => {
     detail.classList.add('open'); views.list.classList.add('pushed');
   });
   dScroll.scrollTop = 0;
   history.pushState({ note: n.id }, '');
-  const t = await fetchNoteTexts(n.id);
+  const [t, sc] = await Promise.all([fetchNoteTexts(n.id), fetchScans(n.id)]);
   if (cur !== n) return;
   prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
     : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
@@ -557,9 +586,14 @@ async function openDetail(n){
     : '<div class="pane-empty">Nothing typed on your Mac for this note yet.</div>';
   // land on the tab with content, same as the Mac
   if (!userTabbed) switchTab(t.prism.trim() ? 'prism' : 'my');
+  // merge: history first, then anything the user added while this loaded
+  photos = sc.concat(photos.filter(p => !sc.some(s => s.rowId && s.rowId === p.rowId)));
+  renderPhotos();
 }
 function closeDetail(){
   cur = null;
+  photos.forEach(p => p.url && URL.revokeObjectURL(p.url));
+  photos = [];
   detail.classList.remove('open'); views.list.classList.remove('pushed');
 }
 function goBack(){ if (history.state && history.state.note) history.back(); else closeDetail(); }
@@ -576,16 +610,18 @@ function renderPhotos(){
     return;
   }
   phZone.innerHTML = '<div class="grid">' + photos.map(p => {
+    if (!p.url) return `<div class="tile ghost">${I.check}<span>On your Mac</span></div>`;
     let badge;
     if (p.rowId === null) badge = '<span class="busy"><span class="spin"></span></span>';
     else if (p.rowId === '') badge = `<span class="warn">${I.warn}</span>`;
+    else if (p.claimed) badge = `<span class="ok" title="Added on your Mac">${I.check}</span>`;
     else badge = `<button class="x" data-k="${p.key}">${I.x}</button>`;
     return `<div class="tile"><img src="${p.url}" alt="">${badge}</div>`;
   }).join('') + `<button class="tile addt" id="gridAdd">${I.plus(20, 2)}Add</button></div>`;
   document.getElementById('gridAdd').onclick = () => libIn.click();
   phZone.querySelectorAll('.x').forEach(b => b.onclick = async () => {
     const p = photos.find(x => x.key === +b.dataset.k);
-    if (!p || !p.rowId) return;
+    if (!p || !p.rowId || p.claimed) return;
     if (await removeScan(p.rowId)) {
       URL.revokeObjectURL(p.url);
       photos = photos.filter(x => x !== p); renderPhotos();
