@@ -1,7 +1,7 @@
 // Prism phone app — minimal shell cache. Network-first so deploys show up on
 // next launch; cache fallback keeps the app opening offline. Supabase calls
 // are cross-origin and never touched.
-const V = 'prism-phone-v6';
+const V = 'prism-phone-v7';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
                './icon-180.png', './icon-192.png', './icon-512.png'];
 
@@ -19,11 +19,15 @@ self.addEventListener('fetch', e => {
   if (u.origin !== location.origin || e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(r => {
-      const copy = r.clone();
-      caches.open(V).then(c => c.put(e.request, copy));
+      if (r.ok) {                       // never cache an error as the offline copy
+        const copy = r.clone();
+        caches.open(V).then(c => c.put(e.request, copy));
+      }
       return r;
     }).catch(() =>
       caches.match(e.request, { ignoreSearch: true })
-        .then(m => m || caches.match('./index.html')))
+        .then(m => m || (e.request.mode === 'navigate'
+          ? caches.match('./index.html')      // only pages fall back to the shell
+          : Response.error())))
   );
 });

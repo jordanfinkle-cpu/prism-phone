@@ -130,7 +130,7 @@ svg{display:block}
 .mdl.head{font-size:13px;font-weight:600;color:var(--ink);margin-top:13px}
 .ph-h{display:flex;align-items:center;padding:20px 24px 11px}
 .ph-h .lab{color:var(--muted)}
-.ph-h .add{margin-left:auto;display:flex;align-items:center;gap:4px;
+.ph-h .add{display:flex;align-items:center;gap:5px;
   color:var(--ink);font-size:13.5px;font-weight:600}
 .ph-empty{display:block;width:calc(100% - 44px);margin:0 22px;padding:26px 20px;
   border-radius:15px;text-align:center;
@@ -231,13 +231,18 @@ svg{display:block}
         placeholder="Jot down what matters to you… Prism never edits these."></textarea>
     </div>
     <div class="ph-h"><span class="lab">PHOTOS</span>
-      <button class="add" id="addBtn"><span id="plusIconS"></span>Add</button></div>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:18px">
+        <button class="add" id="camBtn"><span id="camIconS"></span>Camera</button>
+        <button class="add" id="addBtn"><span id="plusIconS"></span>Add</button>
+      </span></div>
     <div id="phZone"></div>
   </div>
 </div>
 
 <div id="toast"><span id="toastIcon"></span><span id="toastText"></span></div>
 <input type="file" id="libIn" accept="image/*" multiple hidden>
+<!-- single + capture: with `multiple`, iOS hides "Take Photo" — the camera needs its own input -->
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
 
 <script>
 'use strict';
@@ -265,7 +270,7 @@ const I = {
 loginMark.innerHTML = I.mark(46); brandMark.innerHTML = I.mark(17);
 magIcon.innerHTML = I.mag; acctBtn.innerHTML = I.person; refreshBtn.innerHTML = I.refresh;
 chevIcon.innerHTML = I.chev; plusIconS.innerHTML = I.plus(13, 2.6);
-toastIcon.innerHTML = I.check;
+camIconS.innerHTML = I.cam(15, 2); toastIcon.innerHTML = I.check;
 
 /* ---- session (localStorage = the phone's keychain) -------------------- */
 let S = { access:'', refresh:'', exp:0, email:'', uid:'' };
@@ -280,12 +285,18 @@ function adopt(obj){
   persist();
 }
 function signOut(){
-  S = { access:'', refresh:'', exp:0, email:'', uid:'' };
-  localStorage.removeItem('prism.phone.session');
-  notes = []; closeDetail(); hideMenu();
+  const flush = isDirty() ? saveMyNow() : null;   // push unsaved text while the session is still valid
+  if (history.state && history.state.note) history.back();
+  closeDetail(); hideMenu();
+  notes = []; loadedOnce = false;
+  searchIn.value = '';                            // next account starts unfiltered
   stageEmail.style.display = 'block'; stageCode.style.display = 'none';
   emailIn.value = ''; codeIn.value = ''; loginErr.textContent = '';
   show('login');
+  Promise.resolve(flush).finally(() => {
+    S = { access:'', refresh:'', exp:0, email:'', uid:'' };
+    localStorage.removeItem('prism.phone.session');
+  });
 }
 
 let refreshing = null;   // single-flight: GoTrue refresh tokens rotate
@@ -293,7 +304,8 @@ function refreshIfNeeded(){
   if (!S.refresh || (S.access && Date.now()/1000 < S.exp)) return Promise.resolve();
   refreshing ??= (async () => {
     const r = await raw('/auth/v1/token?grant_type=refresh_token', {
-      method:'POST', json:{ refresh_token: S.refresh }});
+      method:'POST', json:{ refresh_token: S.refresh },
+      keepalive: document.visibilityState === 'hidden' });   // survives app suspension mid-flush
     if (r.code === 200) adopt(r.data);
     else if (r.code === 400 || r.code === 401) signOut();
   })().finally(() => { refreshing = null; });
@@ -358,8 +370,9 @@ async function fetchNoteTexts(id){
     return { my: sampleMy[id] !== undefined ? sampleMy[id] : base.my, prism: base.prism, myTs: 'sample' };
   }
   const r = await api(`/rest/v1/call_files?call_id=eq.${id}&kind=in.(my_notes,notes)&deleted_at=is.null&select=kind,content,updated_at`);
+  if (r.code !== 200 || !Array.isArray(r.data)) return null;   // failure ≠ empty note — NEVER blank the editor on this
   const out = { my:'', prism:'', myTs:'' };
-  if (r.code === 200 && Array.isArray(r.data)) for (const row of r.data) {
+  for (const row of r.data) {
     if (row.kind === 'my_notes') { out.my = row.content || ''; out.myTs = row.updated_at || ''; }
     if (row.kind === 'notes')    out.prism = row.content || '';
   }
@@ -411,7 +424,10 @@ async function uploadScan(callId, blob){
   const ins = await api('/rest/v1/scan_inbox', { method:'POST',
     json: [{ call_id: callId, storage_path: object, device_id: 'phone-web' }],
     headers: { Prefer: 'return=representation' }});
-  if (ins.code !== 201 || !ins.data || !ins.data[0] || !ins.data[0].id) return null;
+  if (ins.code !== 201 || !ins.data || !ins.data[0] || !ins.data[0].id) {
+    api('/storage/v1/object/scans/' + object, { method:'DELETE' });   // don't orphan the upload
+    return null;
+  }
   return ins.data[0].id;
 }
 /// Every photo ever sent to this note. Unclaimed rows still have their image
@@ -514,25 +530,31 @@ otherEmail.onclick = () => {
 };
 
 /* ---- notes list ---------------------------------------------------------- */
-let notes = [], loadedOnce = false;
+let notes = [], loadedOnce = false, loadFailed = false;
 function when(d){
   if (!d) return '';
-  const now = new Date();
+  const now = new Date(), diff = now - d;
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
-  if (now - d < 7*86400e3) return d.toLocaleDateString([], { weekday:'short' });
+  if (diff < 0) return d.toLocaleDateString([], { month:'short', day:'numeric' });  // future → real date
+  if (diff < 7*86400e3) return d.toLocaleDateString([], { weekday:'short' });
   return d.toLocaleDateString([], { month:'short', day:'numeric' });
 }
 function renderList(){
   const q = searchIn.value.trim().toLowerCase();
   const f = q ? notes.filter(n => n.title.toLowerCase().includes(q)
                               || n.folder.toLowerCase().includes(q)) : notes;
-  const isToday = n => n.at && n.at.toDateString() === new Date().toDateString();
-  const today = f.filter(isToday), earlier = f.filter(n => !isToday(n));
+  const now = new Date();
+  const isToday = n => n.at && n.at.toDateString() === now.toDateString();
+  const isFuture = n => n.at && n.at > now && !isToday(n);
+  const upcoming = f.filter(isFuture), today = f.filter(isToday),
+        earlier = f.filter(n => !isToday(n) && !isFuture(n));
   let h = '';
   if (!loadedOnce && !notes.length) h = '<div class="load-wrap"><div class="spin"></div></div>';
   else if (!notes.length)
-    h = '<div class="center-note"><div class="a">No notes yet</div><div class="b">Notes you record on your Mac show up here.</div></div>';
+    h = loadFailed
+      ? '<div class="center-note"><div class="a">Couldn’t load your notes</div><div class="b">Check your connection, then tap the refresh arrow above.</div></div>'
+      : '<div class="center-note"><div class="a">No notes yet</div><div class="b">Notes you record on your Mac show up here.</div></div>';
   else if (!f.length)
     h = '<div class="center-note"><div class="b">Nothing matches your search.</div></div>';
   else {
@@ -540,8 +562,11 @@ function renderList(){
       `<button class="row" data-id="${n.id}">` +
       `<span class="mid"><span class="t">${esc(n.title)}</span><span class="chip">${esc(n.folder)}</span></span>` +
       `<span class="when">${when(n.at)}</span></button>`).join('') + '</div>';
-    if (today.length)   h += '<div class="sec-h">Today</div>' + card(today);
-    if (earlier.length) h += `<div class="sec-h${today.length ? ' later' : ''}">${today.length ? 'Earlier' : 'Notes'}</div>` + card(earlier);
+    let any = false;
+    const sec = t => `<div class="sec-h${any ? ' later' : ''}">${t}</div>`;
+    if (upcoming.length) { h += sec('Upcoming') + card(upcoming); any = true; }
+    if (today.length)    { h += sec('Today') + card(today); any = true; }
+    if (earlier.length)  { h += sec(any ? 'Earlier' : 'Notes') + card(earlier); }
   }
   listBody.innerHTML = h;
   listBody.querySelectorAll('.row').forEach(b =>
@@ -549,6 +574,7 @@ function renderList(){
 }
 async function loadNotes(){
   const got = await fetchNotes();
+  loadFailed = got === null;
   if (got !== null) notes = got;
   loadedOnce = true;
   renderList();
@@ -557,7 +583,7 @@ searchIn.addEventListener('input', renderList);
 refreshBtn.onclick = async () => { refreshBtn.style.opacity = .4; await loadNotes(); refreshBtn.style.opacity = ''; };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { if (isDirty()) saveMyNow(); return; }   // app going away → flush
-  if (signedIn() && loadedOnce) { loadNotes(); refreshOpenNote(); }
+  if (signedIn() && loadedOnce) { refreshIfNeeded(); loadNotes(); refreshOpenNote(); }
 });
 
 /* account menu */
@@ -570,31 +596,48 @@ signOutBtn.onclick = signOut;
 /* ---- note detail ----------------------------------------------------------- */
 let cur = null, photos = [], seq = 0, userTabbed = false;
 let myBase = { ts: '', saved: '' };            // row version our edit is based on + last saved text
-let saveTimer = null, saving = false, pendingSave = false;
+let saveTimer = null, saving = false, pendingJob = null, savingJob = null, savingPromise = null;
 const isDirty = () => cur && !myEdit.disabled && myEdit.value !== myBase.saved;
 function setSaveState(t){ saveState.textContent = t; }
 function autogrow(){ myEdit.style.height = 'auto'; myEdit.style.height = myEdit.scrollHeight + 'px'; }
 function queueSave(ms){ clearTimeout(saveTimer); saveTimer = setTimeout(saveMyNow, ms || 1200); }
-async function saveMyNow(){
+/* Local draft = the never-lose-text net: written before every push, cleared on
+   success, replayed the next time that note opens (offline close, crash, kill). */
+function draftPut(job){ try { localStorage.setItem('prism.phone.draft', JSON.stringify({ id: job.note.id, text: job.text })); } catch {} }
+function draftClear(id){ try { const d = JSON.parse(localStorage.getItem('prism.phone.draft') || 'null'); if (d && d.id === id) localStorage.removeItem('prism.phone.draft'); } catch {} }
+function draftGet(id){ try { const d = JSON.parse(localStorage.getItem('prism.phone.draft') || 'null'); return d && d.id === id ? d.text : null; } catch { return null; } }
+function saveMyNow(){
   clearTimeout(saveTimer);
-  if (!cur) return;
-  const note = cur, text = myEdit.value, base = myBase;   // survives switching notes mid-save
-  if (text === base.saved) { if (!saving) setSaveState(''); return; }
-  if (saving) { pendingSave = true; return; }
-  saving = true; setSaveState('Saving…');
-  const ok = await pushMyNotes(note.id, text, base);
-  saving = false;
+  if (!cur || myEdit.disabled) return savingPromise;
+  // capture note + text + base NOW: the save stays correct through note
+  // switches, sign-out, and anything else that mutates the globals later
+  return submitSave({ note: cur, text: myEdit.value, base: myBase });
+}
+function submitSave(job){
+  if (job.text === job.base.saved) { if (!saving) setSaveState(''); return savingPromise; }
+  draftPut(job);
+  if (saving) { pendingJob = job; return savingPromise; }   // queued WITH its data, not a flag
+  savingPromise = runSave(job);
+  return savingPromise;
+}
+async function runSave(job){
+  saving = true; savingJob = job;
+  if (cur === job.note) setSaveState('Saving…');
+  const ok = await pushMyNotes(job.note.id, job.text, job.base);
+  saving = false; savingJob = null;
   if (ok) {
-    base.saved = text;
-    if (cur === note) {
+    job.base.saved = job.text;
+    draftClear(job.note.id);
+    if (cur === job.note) {
       setSaveState('Saved');
       setTimeout(() => { if (!isDirty() && !saving) setSaveState(''); }, 1600);
     }
-  } else if (cur === note) {
+  } else if (cur === job.note) {
     setSaveState("Couldn't save — retrying");
     queueSave(5000);
-  }
-  if (pendingSave) { pendingSave = false; saveMyNow(); }
+  }                            // note closed + failed → the draft replays on next open
+  const p = pendingJob; pendingJob = null;
+  if (p) return submitSave(p);
 }
 function mdLines(text){
   return text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 60).map(s => {
@@ -617,7 +660,15 @@ tabPrism.onclick = () => switchTab('prism', true);
 tabMy.onclick = () => { switchTab('my', true); autogrow(); };
 myEdit.addEventListener('input', () => { autogrow(); setSaveState(''); queueSave(); });
 myEdit.addEventListener('blur', saveMyNow);
+function renderPrismPane(t){
+  prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
+    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
+}
 async function openDetail(n){
+  if (cur && cur.id === n.id && detail.classList.contains('open')) return;  // double-tap
+  // a save for THIS note may still be in flight — let it land so the fetch
+  // below returns the post-save text, not a stale version we'd then rebase over
+  if (savingJob && savingJob.note.id === n.id && savingPromise) { try { await savingPromise; } catch {} }
   cur = n; photos = []; userTabbed = false;
   myBase = { ts: '', saved: '' };
   dMeta.textContent = `${n.folder} · ${when(n.at)}`;
@@ -633,25 +684,44 @@ async function openDetail(n){
   history.pushState({ note: n.id }, '');
   const [t, sc] = await Promise.all([fetchNoteTexts(n.id), fetchScans(n.id)]);
   if (cur !== n) return;
-  prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
-    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
-  myEdit.value = t.my; myEdit.disabled = false;
+  if (!t) {
+    // couldn't load — say so and keep the editor LOCKED (an enabled empty
+    // editor here once let a network blip overwrite the real note)
+    prismBody.innerHTML = '<div class="pane-empty">Couldn’t load this note — check your connection. It retries by itself.</div>';
+    photos = sc; renderPhotos();
+    return;
+  }
+  renderPrismPane(t);
+  const draft = draftGet(n.id);
   myBase = { ts: t.myTs || '', saved: t.my };
-  // land on the tab with content, same as the Mac
-  if (!userTabbed) switchTab(t.prism.trim() ? 'prism' : 'my');
-  autogrow();
+  if (draft !== null && draft !== t.my) {
+    myEdit.value = draft; myEdit.disabled = false;   // unsent text from last time — restore + autosave
+    switchTab('my'); autogrow(); queueSave(800); toast('Restored an unsaved edit');
+  } else {
+    if (draft !== null) draftClear(n.id);
+    myEdit.value = t.my; myEdit.disabled = false;
+    if (!userTabbed) switchTab(t.prism.trim() ? 'prism' : 'my');  // land on content, like the Mac
+    autogrow();
+  }
   // merge: history first, then anything the user added while this loaded
-  photos = sc.concat(photos.filter(p => !sc.some(s => s.rowId && s.rowId === p.rowId)));
+  photos = sc.concat(photos.filter(p => {
+    const dup = sc.some(s => s.rowId && s.rowId === p.rowId);
+    if (dup && p.url) URL.revokeObjectURL(p.url);
+    return !dup;
+  }));
   renderPhotos();
 }
-/* pick up Mac-side edits while the note sits open — never over typing */
+/* pick up Mac-side edits while the note sits open — never over typing,
+   and never with a response older than a save that landed meanwhile */
 async function refreshOpenNote(){
   if (!cur || document.hidden || saving || isDirty() || myEdit === document.activeElement) return;
-  const note = cur, t = await fetchNoteTexts(note.id);
-  if (cur !== note || saving || isDirty() || myEdit === document.activeElement) return;
-  prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
-    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
-  if (t.my !== myBase.saved) { myEdit.value = t.my; autogrow(); }
+  const note = cur, ts0 = myBase.ts, wasLocked = myEdit.disabled;
+  const t = await fetchNoteTexts(note.id);
+  if (!t || cur !== note || saving || isDirty() || myEdit === document.activeElement) return;
+  if (!wasLocked && myBase.ts !== ts0) return;     // something saved while this was airborne
+  renderPrismPane(t);
+  if (t.my !== myBase.saved || wasLocked) { myEdit.value = t.my; autogrow(); }
+  myEdit.disabled = false;                          // a failed initial load heals here
   myBase = { ts: t.myTs || '', saved: t.my };
 }
 setInterval(refreshOpenNote, 20000);
@@ -680,14 +750,20 @@ function renderPhotos(){
     if (!p.url) return `<div class="tile ghost">${x}${I.check}<span>On your Mac</span></div>`;
     let badge = x;
     if (p.rowId === null) badge = '<span class="busy"><span class="spin"></span></span>';
-    else if (p.rowId === '') badge = `<span class="warn">${I.warn}</span>`;
+    else if (p.rowId === '') badge = `<span class="warn" style="right:auto;left:6px">${I.warn}</span>${x}`;
     return `<div class="tile"><img src="${p.url}" alt="">${badge}</div>`;
   }).join('') + `<button class="tile addt" id="gridAdd">${I.plus(20, 2)}Add</button></div>`;
   document.getElementById('gridAdd').onclick = () => libIn.click();
   phZone.querySelectorAll('.x').forEach(b => b.onclick = async e => {
     e.stopPropagation();
     const p = photos.find(x => x.key === +b.dataset.k);
-    if (!p || !p.rowId) return;
+    if (!p) return;
+    if (p.rowId === '') {                  // failed upload — a local-only tile
+      if (p.url) URL.revokeObjectURL(p.url);
+      photos = photos.filter(q => q !== p); renderPhotos();
+      return;
+    }
+    if (!p.rowId) return;
     if (p.claimed && !confirm('This photo is already in the note on your Mac — delete it there too?')) return;
     if (await removeScan(p.rowId)) {
       if (p.url) URL.revokeObjectURL(p.url);
@@ -704,21 +780,27 @@ async function addFiles(files){
     const blob = await exportJPEG(f);
     if (!blob) continue;
     const p = { key: ++seq, url: URL.createObjectURL(blob), rowId: null, blob };
-    photos.push(p); batch.push(p);
+    batch.push(p);
+    if (cur === note) photos.push(p);   // tiles belong to THIS note's grid only
   }
-  renderPhotos();
+  if (cur === note) renderPhotos();
   let ok = 0;
   for (const p of batch) {
     const rid = await uploadScan(note.id, p.blob);
     p.rowId = rid || '';
     delete p.blob;
     if (rid) ok++;
-    if (cur === note) renderPhotos();
+    if (cur === note) {
+      if (!photos.includes(p)) photos.push(p);   // user came back mid-upload
+      renderPhotos();
+    }
   }
   toast(ok === 0 ? 'Upload failed — try again' : `${ok} photo${ok === 1 ? '' : 's'} sent to your Mac`);
 }
 addBtn.onclick = () => libIn.click();
+camBtn.onclick = () => camIn.click();
 libIn.onchange = () => { addFiles(libIn.files); libIn.value = ''; };
+camIn.onchange = () => { addFiles(camIn.files); camIn.value = ''; };
 
 /* ---- boot ------------------------------------------------------------------ */
 function enterApp(){ show('list'); loadedOnce = false; renderList(); loadNotes(); }
