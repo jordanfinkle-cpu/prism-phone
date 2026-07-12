@@ -28,7 +28,7 @@ body{
 }
 button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer}
 input{font-family:inherit;border:0;outline:none;background:none;color:var(--ink)}
-input::placeholder{color:var(--faint)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
 svg{display:block}
 .view{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column}
 .view.on{display:flex}
@@ -123,6 +123,12 @@ svg{display:block}
 .pane-sub{display:flex;align-items:center;justify-content:space-between;gap:10px;
   font-size:12px;color:var(--faint);margin-bottom:16px}
 .pane-empty{font-size:13.5px;line-height:1.6;color:var(--faint);padding:2px 0 4px}
+/* My notes editor — same borderless textarea as the Mac */
+.note-edit{display:block;width:100%;min-height:130px;font-family:inherit;font-size:16px;
+  line-height:1.55;color:var(--body);background:transparent;border:none;outline:none;
+  resize:none;overflow:hidden;padding:0 0 6px}
+.note-edit:disabled{opacity:.5}
+#saveState{flex:none}
 .lab{font-size:11.5px;font-weight:600;letter-spacing:.4px}
 .mdl{display:flex;gap:11px;font-size:14.5px;color:var(--body);line-height:1.55}
 .mdl + .mdl{margin-top:8px}
@@ -239,8 +245,9 @@ svg{display:block}
       <div id="prismBody"></div>
     </div>
     <div class="pane" id="paneMy" hidden>
-      <div class="pane-sub"><span>Typed on your Mac — Prism never edits this</span></div>
-      <div id="myBody"></div>
+      <div class="pane-sub"><span>Synced with your Mac — Prism never edits this</span><span id="saveState"></span></div>
+      <textarea id="myEdit" class="note-edit" spellcheck="true" disabled
+        placeholder="Jot down what matters to you… Prism never edits these."></textarea>
     </div>
     <div class="ph-h"><span class="lab">PHOTOS</span>
       <button class="add" id="addBtn"><span id="plusIconS"></span>Add</button></div>
@@ -320,10 +327,10 @@ function refreshIfNeeded(){
   return refreshing;
 }
 
-async function raw(path, { method='GET', json, body, contentType='application/json', headers={} } = {}){
+async function raw(path, { method='GET', json, body, contentType='application/json', headers={}, keepalive=false } = {}){
   try {
     const h = { apikey: ANON, 'Content-Type': contentType, ...headers };
-    const r = await fetch(BASE + path, { method, headers: h,
+    const r = await fetch(BASE + path, { method, headers: h, keepalive,
       body: json !== undefined ? JSON.stringify(json) : body });
     let data = null;
     try { data = await r.clone().json(); } catch {}
@@ -364,21 +371,60 @@ async function fetchNotes(){
              at: at && !isNaN(at) ? at : null };
   }).filter(n => n.id);
 }
+const sampleMy = {};   // sample mode: edits round-trip in-memory
 async function fetchNoteTexts(id){
   if (SAMPLE) {
-    if (id === 's4') return { my:'', prism:'' };
-    if (id === 's2') return { my: "- Wants a two-year deal, opt-out after one\n- Call back Friday before the deadline", prism: '' };
-    return {
+    const canned = {
+      s2: { my: "- Wants a two-year deal, opt-out after one\n- Call back Friday before the deadline", prism: '' },
+      s4: { my:'', prism:'' } };
+    const base = canned[id] || {
       my: "- Guard looked explosive in the 3-man drills\n- Ask medical about the ankle from March\n- Compare wingspan vs. last year's class",
       prism: "- Standout guard showed high-level explosiveness across the workout.\n- Flag the March ankle history with medical before Thursday." };
+    return { my: sampleMy[id] !== undefined ? sampleMy[id] : base.my, prism: base.prism, myTs: 'sample' };
   }
-  const r = await api(`/rest/v1/call_files?call_id=eq.${id}&kind=in.(my_notes,notes)&deleted_at=is.null&select=kind,content`);
-  const out = { my:'', prism:'' };
+  const r = await api(`/rest/v1/call_files?call_id=eq.${id}&kind=in.(my_notes,notes)&deleted_at=is.null&select=kind,content,updated_at`);
+  const out = { my:'', prism:'', myTs:'' };
   if (r.code === 200 && Array.isArray(r.data)) for (const row of r.data) {
-    if (row.kind === 'my_notes') out.my = row.content || '';
+    if (row.kind === 'my_notes') { out.my = row.content || ''; out.myTs = row.updated_at || ''; }
     if (row.kind === 'notes')    out.prism = row.content || '';
   }
   return out;
+}
+
+/* ---- My notes editing: same optimistic-concurrency protocol as the Mac.
+   Guarded PATCH on the updated_at we loaded; a miss means another device
+   wrote meanwhile — rebase on the fresh row and write once more. The Mac
+   keeps a .conflict copy of any unsynced text of its own, so a phone write
+   can never destroy anything. ---- */
+async function sha1hex(s){
+  const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function pushMyNotes(callId, text, base){
+  if (SAMPLE) { await new Promise(r => setTimeout(r, 400)); sampleMy[callId] = text; return true; }
+  const alive = document.visibilityState === 'hidden';   // page may be closing
+  const row = { content: text, content_sha1: await sha1hex(text), device_id: 'phone-web' };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (base.ts) {
+      const r = await api(`/rest/v1/call_files?call_id=eq.${callId}&kind=eq.my_notes&updated_at=eq.${encodeURIComponent(base.ts)}`,
+        { method:'PATCH', json: row, headers: { Prefer: 'return=representation' }, keepalive: alive });
+      if (r.code >= 200 && r.code < 300 && Array.isArray(r.data) && r.data[0]) {
+        base.ts = r.data[0].updated_at || ''; return true;
+      }
+      if (!(r.code >= 200 && r.code < 300)) return false;      // offline / auth
+      const f = await api(`/rest/v1/call_files?call_id=eq.${callId}&kind=eq.my_notes&select=updated_at`);
+      base.ts = (f.code === 200 && f.data && f.data[0] && f.data[0].updated_at) || '';
+      continue;                                                // retry (patch or insert)
+    }
+    const r = await api('/rest/v1/call_files', { method:'POST',
+      json: [{ call_id: callId, kind: 'my_notes', ...row }],
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, keepalive: alive });
+    if ((r.code === 200 || r.code === 201) && Array.isArray(r.data) && r.data[0]) {
+      base.ts = r.data[0].updated_at || ''; return true;
+    }
+    return false;
+  }
+  return false;
 }
 async function uploadScan(callId, blob){
   if (SAMPLE) { await new Promise(r => setTimeout(r, 600)); return crypto.randomUUID(); }
@@ -535,7 +581,8 @@ searchIn.addEventListener('input', renderList);
 refreshBtn.onclick = async () => { refreshBtn.style.opacity = .4; await loadNotes(); refreshBtn.style.opacity = ''; };
 fab.onclick = () => { if (notes[0]) openDetail(notes[0]); };
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && signedIn() && loadedOnce) loadNotes();
+  if (document.hidden) { if (isDirty()) saveMyNow(); return; }   // app going away → flush
+  if (signedIn() && loadedOnce) { loadNotes(); refreshOpenNote(); }
 });
 
 /* account menu */
@@ -547,6 +594,33 @@ signOutBtn.onclick = signOut;
 
 /* ---- note detail ----------------------------------------------------------- */
 let cur = null, photos = [], seq = 0, userTabbed = false;
+let myBase = { ts: '', saved: '' };            // row version our edit is based on + last saved text
+let saveTimer = null, saving = false, pendingSave = false;
+const isDirty = () => cur && !myEdit.disabled && myEdit.value !== myBase.saved;
+function setSaveState(t){ saveState.textContent = t; }
+function autogrow(){ myEdit.style.height = 'auto'; myEdit.style.height = myEdit.scrollHeight + 'px'; }
+function queueSave(ms){ clearTimeout(saveTimer); saveTimer = setTimeout(saveMyNow, ms || 1200); }
+async function saveMyNow(){
+  clearTimeout(saveTimer);
+  if (!cur) return;
+  const note = cur, text = myEdit.value, base = myBase;   // survives switching notes mid-save
+  if (text === base.saved) { if (!saving) setSaveState(''); return; }
+  if (saving) { pendingSave = true; return; }
+  saving = true; setSaveState('Saving…');
+  const ok = await pushMyNotes(note.id, text, base);
+  saving = false;
+  if (ok) {
+    base.saved = text;
+    if (cur === note) {
+      setSaveState('Saved');
+      setTimeout(() => { if (!isDirty() && !saving) setSaveState(''); }, 1600);
+    }
+  } else if (cur === note) {
+    setSaveState("Couldn't save — retrying");
+    queueSave(5000);
+  }
+  if (pendingSave) { pendingSave = false; saveMyNow(); }
+}
 function mdLines(text){
   return text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 60).map(s => {
     let bullet = false, head = false;
@@ -565,12 +639,16 @@ function switchTab(t, byUser){
   paneMy.hidden = t !== 'my';
 }
 tabPrism.onclick = () => switchTab('prism', true);
-tabMy.onclick = () => switchTab('my', true);
+tabMy.onclick = () => { switchTab('my', true); autogrow(); };
+myEdit.addEventListener('input', () => { autogrow(); setSaveState(''); queueSave(); });
+myEdit.addEventListener('blur', saveMyNow);
 async function openDetail(n){
   cur = n; photos = []; userTabbed = false;
+  myBase = { ts: '', saved: '' };
   dMeta.textContent = `${n.folder} · ${when(n.at)}`;
   dTitle.textContent = n.title;
-  prismBody.innerHTML = ''; myBody.innerHTML = '';
+  prismBody.innerHTML = '';
+  myEdit.value = ''; myEdit.disabled = true; setSaveState('');
   switchTab('prism');
   phZone.innerHTML = '<div class="ph-load"><div class="spin"></div></div>';
   requestAnimationFrame(() => {
@@ -582,15 +660,28 @@ async function openDetail(n){
   if (cur !== n) return;
   prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
     : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
-  myBody.innerHTML = t.my.trim() ? mdLines(t.my)
-    : '<div class="pane-empty">Nothing typed on your Mac for this note yet.</div>';
+  myEdit.value = t.my; myEdit.disabled = false;
+  myBase = { ts: t.myTs || '', saved: t.my };
   // land on the tab with content, same as the Mac
   if (!userTabbed) switchTab(t.prism.trim() ? 'prism' : 'my');
+  autogrow();
   // merge: history first, then anything the user added while this loaded
   photos = sc.concat(photos.filter(p => !sc.some(s => s.rowId && s.rowId === p.rowId)));
   renderPhotos();
 }
+/* pick up Mac-side edits while the note sits open — never over typing */
+async function refreshOpenNote(){
+  if (!cur || document.hidden || saving || isDirty() || myEdit === document.activeElement) return;
+  const note = cur, t = await fetchNoteTexts(note.id);
+  if (cur !== note || saving || isDirty() || myEdit === document.activeElement) return;
+  prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
+    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
+  if (t.my !== myBase.saved) { myEdit.value = t.my; autogrow(); }
+  myBase = { ts: t.myTs || '', saved: t.my };
+}
+setInterval(refreshOpenNote, 20000);
 function closeDetail(){
+  if (isDirty()) saveMyNow();          // captures note + text before cur clears
   cur = null;
   photos.forEach(p => p.url && URL.revokeObjectURL(p.url));
   photos = [];
