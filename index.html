@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Prism</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Prism">
+<meta name="theme-color" content="#FBFBFA">
+<style>
+/* ---- Prism iOS design tokens (Theme.swift, Direction B) ---- */
+:root{
+  --bg:#FBFBFA; --ink:#1A1A19; --body:#3a3a3a; --muted:#737373;
+  --faint:#a8a8a8; --faint2:#b0b0b0; --chip:#f0f0ee; --card:#fff;
+  --card-border:rgba(0,0,0,.05); --mynotes-bg:#FAFAF9; --accent:#E0533D;
+  --prism:#6b63b5; --prism-bg:#F8F7FD; --prism-border:#ECE9F7;
+  --prism-soft:#a39cc9; --prism-bullet:#c4bce6;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  background:var(--bg); color:var(--ink);
+  -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
+}
+button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer}
+input{font-family:inherit;border:0;outline:none;background:none;color:var(--ink)}
+input::placeholder{color:var(--faint)}
+svg{display:block}
+.view{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column}
+.view.on{display:flex}
+
+/* ---------------- login ---------------- */
+#login{align-items:center;justify-content:center;padding:0 40px;text-align:center}
+#login .mark{margin-bottom:14px}
+#login h1{font-size:22px;font-weight:600}
+#login .sub{font-size:13px;color:var(--muted);line-height:1.45;margin:6px 0 26px}
+.field{
+  width:100%;background:rgba(0,0,0,.045);border-radius:12px;
+  padding:13px;font-size:16px;text-align:center;
+}
+#codeIn{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:19px;font-weight:500;
+  letter-spacing:2px;max-width:230px}
+.big-btn{
+  width:100%;margin-top:10px;padding:14px;border-radius:12px;
+  background:var(--ink);color:#fff;font-size:16px;font-weight:600;
+}
+.big-btn:disabled{opacity:.35}
+.link-btn{font-size:13px;color:var(--muted);margin-top:12px}
+#loginErr{font-size:13px;color:var(--accent);height:20px;margin-top:10px}
+#sentTo{font-size:13px;color:var(--muted);margin-bottom:10px}
+#sentTo b{color:var(--ink)}
+
+/* ---------------- notes list ---------------- */
+#list{transition:transform .34s cubic-bezier(.32,.72,.3,1)}
+#list.pushed{transform:translateX(-9%)}
+.list-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(6px + env(safe-area-inset-top)) 0 120px}
+.brand{display:flex;align-items:center;gap:8px;padding:6px 22px 0}
+.brand .name{font-size:15px;font-weight:600}
+.brand .grow{flex:1}
+.icon-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);border-radius:10px}
+.icon-btn:active{background:rgba(0,0,0,.05)}
+.h-title{font-size:32px;font-weight:700;padding:2px 22px 10px}
+.search{display:flex;align-items:center;gap:9px;color:var(--faint);
+  background:rgba(0,0,0,.045);border-radius:12px;padding:11px 14px;margin:0 16px 20px}
+.search input{flex:1;font-size:16px}
+.sec-h{font-size:13px;letter-spacing:.4px;color:var(--faint);text-transform:uppercase;
+  padding:0 24px 8px}
+.sec-h.later{padding-top:22px}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;
+  margin:0 16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:13px;width:100%;padding:14px 15px;text-align:left}
+.row:active{background:rgba(0,0,0,.03)}
+.row + .row{border-top:1px solid rgba(0,0,0,.05);}
+.row .doc{width:38px;height:38px;border-radius:10px;background:var(--chip);flex:none;
+  display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.row .mid{flex:1;min-width:0}
+.row .t{display:block;font-size:16px;font-weight:500;color:var(--ink);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.row .chip{display:inline-block;font-size:12px;color:var(--muted);background:var(--chip);
+  border-radius:6px;padding:2px 8px;margin-top:3px;max-width:100%;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.row .when{font-size:13px;color:var(--faint2);flex:none}
+.center-note{padding-top:60px;text-align:center}
+.center-note .a{font-size:16px;font-weight:600}
+.center-note .b{font-size:13px;color:var(--faint);margin-top:6px}
+#fab{position:fixed;right:22px;bottom:calc(30px + env(safe-area-inset-bottom));
+  width:58px;height:58px;border-radius:19px;background:var(--ink);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 13px rgba(0,0,0,.32);display:none}
+#menu{position:fixed;top:calc(44px + env(safe-area-inset-top));right:14px;z-index:30;
+  background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;
+  box-shadow:0 12px 32px rgba(0,0,0,.14);padding:6px;min-width:210px;display:none}
+#menu .email{font-size:13px;color:var(--muted);padding:9px 12px;border-bottom:1px solid rgba(0,0,0,.06);
+  margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#menu button{display:block;width:100%;text-align:left;font-size:15px;padding:9px 12px;border-radius:9px}
+#menu button:active{background:rgba(0,0,0,.05)}
+#menu .out{color:var(--accent)}
+#menuVeil{position:fixed;inset:0;z-index:29;display:none}
+
+/* ---------------- note detail ---------------- */
+#detail{transform:translateX(103%);transition:transform .34s cubic-bezier(.32,.72,.3,1);
+  display:flex;z-index:20}
+#detail.open{transform:translateX(0);box-shadow:-18px 0 40px rgba(0,0,0,.07)}
+.d-top{display:flex;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 12px 6px}
+.back{display:flex;align-items:center;gap:2px;color:var(--ink);font-size:16px;padding:6px 8px}
+.d-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:140px}
+.d-meta{font-size:12.5px;color:var(--faint);padding:4px 22px 0}
+.d-title{font-size:26px;font-weight:700;line-height:1.25;padding:8px 22px 0}
+.tcard{border-radius:15px;padding:16px;margin:22px 22px 0}
+.tcard.my{background:var(--mynotes-bg);border:1px solid rgba(0,0,0,.06)}
+.tcard .lrow{display:flex;align-items:center;margin-bottom:12px}
+.lab{font-size:11.5px;font-weight:600;letter-spacing:.4px}
+.tcard .tag{margin-left:auto;font-size:11.5px;color:var(--faint);font-weight:400}
+.mdl{display:flex;gap:11px;font-size:15px;color:var(--body);line-height:1.45}
+.mdl + .mdl{margin-top:9px}
+.mdl .bu{flex:none}
+.mdl.head{font-size:13px;font-weight:600;color:var(--ink);margin-top:13px}
+.tcard.prism{background:var(--prism-bg);border:1px solid var(--prism-border)}
+.tcard.prism .lrow{margin-bottom:0;color:var(--prism);gap:6px}
+.tcard.prism .sub{font-size:11.5px;color:var(--prism-soft);margin:4px 0 13px}
+.ph-h{display:flex;align-items:center;padding:20px 24px 11px}
+.ph-h .lab{color:var(--muted)}
+.ph-h .add{margin-left:auto;display:flex;align-items:center;gap:4px;
+  color:var(--accent);font-size:13.5px;font-weight:600}
+.ph-empty{display:block;width:calc(100% - 44px);margin:0 22px;padding:26px 20px;
+  border-radius:15px;text-align:center;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='15' fill='none' stroke='rgba(0,0,0,.14)' stroke-width='1.5' stroke-dasharray='6 5'/%3E%3C/svg%3E")}
+.ph-empty .cam{width:46px;height:46px;border-radius:14px;background:rgba(0,0,0,.05);
+  display:flex;align-items:center;justify-content:center;color:var(--muted);margin:0 auto 12px}
+.ph-empty .a{font-size:15px;font-weight:600;color:var(--body)}
+.ph-empty .b{font-size:13px;color:var(--faint);margin-top:3px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 22px}
+.tile{position:relative;aspect-ratio:1;border-radius:13px;overflow:hidden;
+  border:1px solid rgba(0,0,0,.04)}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile .x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;display:flex;align-items:center;justify-content:center}
+.tile .busy{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+.tile .warn{position:absolute;top:6px;right:6px;color:#f5c211;font-size:15px;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.spin{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.tile.addt{border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;color:var(--faint);font-size:12px;font-weight:500;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='13' fill='none' stroke='rgba(0,0,0,.16)' stroke-width='1.5' stroke-dasharray='6 5'/%3E%3C/svg%3E")}
+.toolbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:26px;
+  padding:12px 22px calc(14px + env(safe-area-inset-bottom));
+  background:rgba(251,251,250,.82);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border-top:1px solid rgba(0,0,0,.06)}
+.tb-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:600}
+.tb-btn.cam{color:var(--accent)}
+.tb-btn.lib{color:var(--muted);font-weight:500}
+.tb-done{margin-left:auto;font-size:16px;font-weight:600;color:var(--ink)}
+
+/* ---------------- shared ---------------- */
+#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));z-index:50;
+  transform:translate(-50%,20px);display:flex;align-items:center;gap:9px;
+  background:rgba(0,0,0,.92);color:#fff;font-size:14px;font-weight:500;
+  padding:11px 18px;border-radius:13px;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.load-wrap{padding-top:60px;display:flex;justify-content:center}
+.load-wrap .spin{width:22px;height:22px;border-color:rgba(0,0,0,.12);border-top-color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="view" id="login">
+  <div class="mark" id="loginMark"></div>
+  <h1>Welcome to Prism</h1>
+  <div class="sub">Sign in with the account you use on your Mac —<br>photos you add here land in your notes there.</div>
+  <div id="stageEmail" style="width:100%;max-width:330px">
+    <input class="field" id="emailIn" type="email" inputmode="email" autocomplete="email"
+           autocapitalize="none" autocorrect="off" placeholder="you@example.com">
+    <button class="big-btn" id="sendBtn" disabled>Email me a code</button>
+  </div>
+  <div id="stageCode" style="width:100%;max-width:330px;display:none">
+    <div id="sentTo"></div>
+    <input class="field" id="codeIn" inputmode="numeric" autocomplete="one-time-code"
+           placeholder="12345678">
+    <button class="big-btn" id="verifyBtn" disabled>Sign in</button>
+    <button class="link-btn" id="otherEmail">Use a different email</button>
+  </div>
+  <div id="loginErr"></div>
+</div>
+
+<!-- ============ NOTES LIST ============ -->
+<div class="view" id="list">
+  <div class="list-scroll" id="listScroll">
+    <div class="brand">
+      <span id="brandMark"></span><span class="name">Prism</span>
+      <span class="grow"></span>
+      <button class="icon-btn" id="refreshBtn" aria-label="Refresh"></button>
+      <button class="icon-btn" id="acctBtn" aria-label="Account"></button>
+    </div>
+    <div class="h-title">Notes</div>
+    <div class="search"><span id="magIcon"></span>
+      <input id="searchIn" placeholder="Search notes & photos" autocapitalize="none" autocorrect="off"></div>
+    <div id="listBody"></div>
+  </div>
+  <button id="fab" aria-label="Add photos to your latest note"></button>
+</div>
+<div id="menuVeil"></div>
+<div id="menu"><div class="email" id="menuEmail"></div><button class="out" id="signOutBtn">Sign out</button></div>
+
+<!-- ============ NOTE DETAIL ============ -->
+<div class="view" id="detail">
+  <div class="d-top"><button class="back" id="backBtn"><span id="chevIcon"></span>Notes</button></div>
+  <div class="d-scroll" id="dScroll">
+    <div class="d-meta" id="dMeta"></div>
+    <div class="d-title" id="dTitle"></div>
+    <div id="myCard"></div>
+    <div class="ph-h"><span class="lab">PHOTOS</span>
+      <button class="add" id="addBtn"><span id="plusIconS"></span>Add</button></div>
+    <div id="phZone"></div>
+    <div id="prismCard"></div>
+  </div>
+  <div class="toolbar">
+    <button class="tb-btn cam" id="camBtn"><span id="camIcon2"></span>Camera</button>
+    <button class="tb-btn lib" id="libBtn"><span id="libIcon"></span>Library</button>
+    <button class="tb-done" id="doneBtn">Done</button>
+  </div>
+</div>
+
+<div id="toast"><span id="toastIcon"></span><span id="toastText"></span></div>
+<input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+<input type="file" id="libIn" accept="image/*" multiple hidden>
+
+<script>
+'use strict';
+/* =====================================================================
+   Prism for iPhone — web twin of ios/PrismPhone. Same Supabase project,
+   same REST calls, same design. Installed via Add to Home Screen.
+   ===================================================================== */
+const BASE = 'https://xpfkhiycdlvwgpbghxak.supabase.co';
+const ANON = 'sb_publishable_Cb2VV5Vzq76BkhdP8njpQw_cpH1vhem';
+const SAMPLE = new URLSearchParams(location.search).get('sample') === '1';
+
+/* ---- inline SF-style icons ------------------------------------------ */
+const I = {
+  mark : s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="#1A1A19"><path d="M12 3.6c.62 0 1.19.33 1.5.87l7.55 13.06c.62 1.07-.15 2.41-1.39 2.41H4.34c-1.24 0-2.01-1.34-1.39-2.41L10.5 4.47c.31-.54.88-.87 1.5-.87z"/></svg>`,
+  mag  : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2 20 20"/></svg>`,
+  doc  : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>`,
+  person:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="10" r="3.1"/><path d="M5.8 18.6c1.1-2.6 3.4-4 6.2-4s5.1 1.4 6.2 4" stroke-linecap="round"/></svg>`,
+  refresh:`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5A8.1 8.1 0 0 0 5.6 7.4L4 9.2"/><path d="M4 4.8v4.4h4.4"/><path d="M4 12.5a8.1 8.1 0 0 0 14.4 4.1l1.6-1.8"/><path d="M20 19.2v-4.4h-4.4"/></svg>`,
+  cam  : (s,w) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.2a2 2 0 0 1 2-2h1.6l1.2-1.8a1.6 1.6 0 0 1 1.3-.7h4.8a1.6 1.6 0 0 1 1.3.7l1.2 1.8h1.6a2 2 0 0 1 2 2v9.1a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.6" r="3.4"/></svg>`,
+  lib  : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="14.5" height="12.5" rx="2"/><path d="M20.5 8.5v7.5a2.5 2.5 0 0 1-2.5 2.5"/><path d="m3.9 15.5 3.6-3.5a1.4 1.4 0 0 1 2 0l4.9 4.9"/><circle cx="13.6" cy="9.6" r="1.3" fill="currentColor" stroke="none"/></svg>`,
+  plus : (s,w) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  x    : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M5 5l14 14M19 5 5 19"/></svg>`,
+  chev : `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5 8 12l6.5 7"/></svg>`,
+  spark: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8 14 9.4l6.6 2-6.6 2-2 6.6-2-6.6-6.6-2 6.6-2z"/></svg>`,
+  check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>`,
+  warn : `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2c.6 0 1.15.32 1.45.84l8.2 14.2c.6 1.04-.15 2.36-1.45 2.36H3.8c-1.3 0-2.05-1.32-1.45-2.36l8.2-14.2c.3-.52.85-.84 1.45-.84z"/><path d="M12 9v5" stroke="#1A1A19" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="#1A1A19"/></svg>`,
+};
+loginMark.innerHTML = I.mark(46); brandMark.innerHTML = I.mark(17);
+magIcon.innerHTML = I.mag; acctBtn.innerHTML = I.person; refreshBtn.innerHTML = I.refresh;
+fab.innerHTML = I.cam(25, 2); chevIcon.innerHTML = I.chev; plusIconS.innerHTML = I.plus(13, 2.6);
+camIcon2.innerHTML = I.cam(23, 1.8); libIcon.innerHTML = I.lib; toastIcon.innerHTML = I.check;
+
+/* ---- session (localStorage = the phone's keychain) -------------------- */
+let S = { access:'', refresh:'', exp:0, email:'', uid:'' };
+try { Object.assign(S, JSON.parse(localStorage.getItem('prism.phone.session') || '{}')); } catch {}
+const signedIn = () => SAMPLE || !!S.refresh;
+function persist(){ localStorage.setItem('prism.phone.session', JSON.stringify(S)); }
+function adopt(obj){
+  S.access  = obj.access_token  || S.access;
+  S.refresh = obj.refresh_token || S.refresh;
+  if (obj.expires_in) S.exp = Date.now()/1000 + obj.expires_in - 60;
+  if (obj.user && obj.user.id) S.uid = obj.user.id;
+  persist();
+}
+function signOut(){
+  S = { access:'', refresh:'', exp:0, email:'', uid:'' };
+  localStorage.removeItem('prism.phone.session');
+  notes = []; closeDetail(); hideMenu();
+  stageEmail.style.display = 'block'; stageCode.style.display = 'none';
+  emailIn.value = ''; codeIn.value = ''; loginErr.textContent = '';
+  show('login');
+}
+
+let refreshing = null;   // single-flight: GoTrue refresh tokens rotate
+function refreshIfNeeded(){
+  if (!S.refresh || (S.access && Date.now()/1000 < S.exp)) return Promise.resolve();
+  refreshing ??= (async () => {
+    const r = await raw('/auth/v1/token?grant_type=refresh_token', {
+      method:'POST', json:{ refresh_token: S.refresh }});
+    if (r.code === 200) adopt(r.data);
+    else if (r.code === 400 || r.code === 401) signOut();
+  })().finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+async function raw(path, { method='GET', json, body, contentType='application/json', headers={} } = {}){
+  try {
+    const h = { apikey: ANON, 'Content-Type': contentType, ...headers };
+    const r = await fetch(BASE + path, { method, headers: h,
+      body: json !== undefined ? JSON.stringify(json) : body });
+    let data = null;
+    try { data = await r.clone().json(); } catch {}
+    return { code: r.status, data };
+  } catch { return { code: 0, data: null }; }
+}
+async function api(path, opts = {}){
+  await refreshIfNeeded();
+  if (!S.access) return { code: 401, data: null };
+  opts.headers = { Authorization: 'Bearer ' + S.access, ...(opts.headers || {}) };
+  return raw(path, opts);
+}
+
+/* ---- data ------------------------------------------------------------ */
+function titleFromFolder(f){
+  const i = f.lastIndexOf(' - ');
+  if (i > 0) { const head = f.slice(0, i).trim(); if (head) return head; }
+  return f || 'Untitled';
+}
+async function fetchNotes(){
+  if (SAMPLE) return sampleNotes();
+  const r = await api('/rest/v1/calls?deleted_at=is.null&select=id,folder_name,meta,started_at&order=started_at.desc.nullslast&limit=200');
+  if (r.code !== 200 || !Array.isArray(r.data)) return null;
+  return r.data.map(row => {
+    const meta = row.meta || {};
+    const at = row.started_at ? new Date(row.started_at) : null;
+    return { id: row.id,
+             title: meta.title || titleFromFolder(row.folder_name || ''),
+             folder: meta.collection || 'Notes',
+             at: at && !isNaN(at) ? at : null };
+  }).filter(n => n.id);
+}
+async function fetchNoteTexts(id){
+  if (SAMPLE) return {
+    my: "- Guard looked explosive in the 3-man drills\n- Ask medical about the ankle from March\n- Compare wingspan vs. last year's class",
+    prism: "- Standout guard showed high-level explosiveness across the workout.\n- Flag the March ankle history with medical before Thursday." };
+  const r = await api(`/rest/v1/call_files?call_id=eq.${id}&kind=in.(my_notes,notes)&deleted_at=is.null&select=kind,content`);
+  const out = { my:'', prism:'' };
+  if (r.code === 200 && Array.isArray(r.data)) for (const row of r.data) {
+    if (row.kind === 'my_notes') out.my = row.content || '';
+    if (row.kind === 'notes')    out.prism = row.content || '';
+  }
+  return out;
+}
+async function uploadScan(callId, blob){
+  if (SAMPLE) { await new Promise(r => setTimeout(r, 600)); return crypto.randomUUID(); }
+  if (!S.uid) return null;
+  const object = `${S.uid}/${crypto.randomUUID()}.jpg`;
+  const up = await api(`/storage/v1/object/scans/${object}`,
+    { method:'POST', body: blob, contentType:'image/jpeg' });
+  if (up.code !== 200) return null;
+  const ins = await api('/rest/v1/scan_inbox', { method:'POST',
+    json: [{ call_id: callId, storage_path: object, device_id: 'phone-web' }],
+    headers: { Prefer: 'return=representation' }});
+  if (ins.code !== 201 || !ins.data || !ins.data[0] || !ins.data[0].id) return null;
+  return ins.data[0].id;
+}
+async function removeScan(rowId){
+  if (SAMPLE) return true;
+  const r = await api(`/rest/v1/scan_inbox?id=eq.${rowId}&claimed_at=is.null&select=storage_path`,
+    { method:'DELETE', headers: { Prefer: 'return=representation' }});
+  const path = r.code === 200 && r.data && r.data[0] && r.data[0].storage_path;
+  if (!path) return false;
+  api('/storage/v1/object/scans/' + path, { method:'DELETE' });
+  return true;
+}
+function sampleNotes(){
+  const h = n => new Date(Date.now() - n*3600e3), d = n => new Date(Date.now() - n*86400e3);
+  return [
+    { id:'s1', title:'Pre-draft workout debrief', folder:'2026 Draft', at:h(2) },
+    { id:'s2', title:'Agent call — Bitting', folder:'Free Agency', at:h(4) },
+    { id:'s3', title:'NBA draft strategy and trade analysis', folder:'2026 Draft', at:d(3) },
+    { id:'s4', title:'Front office sync', folder:'Trades & Cap', at:d(4) }];
+}
+
+/* ---- image export: ≤2200px JPEG q0.82 (same as the iOS app) ----------- */
+function exportJPEG(file){
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 2200 / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => resolve(b), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+/* ---- view plumbing ----------------------------------------------------- */
+const views = { login: document.getElementById('login'), list: document.getElementById('list') };
+const detail = document.getElementById('detail');   // parked off-screen via transform
+function show(which){
+  views.login.classList.toggle('on', which === 'login');
+  views.list.classList.toggle('on', which === 'list');
+}
+function toast(t){
+  toastText.textContent = t;
+  document.getElementById('toast').classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => document.getElementById('toast').classList.remove('show'), 1900);
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---- login ------------------------------------------------------------- */
+let busy = false;
+emailIn.addEventListener('input', () => sendBtn.disabled = busy || !emailIn.value.includes('@'));
+codeIn.addEventListener('input', () => verifyBtn.disabled = busy || codeIn.value.trim().length < 6);
+emailIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !sendBtn.disabled) sendBtn.click(); });
+codeIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !verifyBtn.disabled) verifyBtn.click(); });
+sendBtn.onclick = async () => {
+  busy = true; sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; loginErr.textContent = '';
+  const email = emailIn.value.trim();
+  const r = await raw('/auth/v1/otp', { method:'POST', json:{ email, create_user: true }});
+  busy = false; sendBtn.textContent = 'Email me a code'; sendBtn.disabled = !email.includes('@');
+  if (r.code === 200) {
+    stageEmail.style.display = 'none'; stageCode.style.display = 'block';
+    sentTo.innerHTML = 'We sent a sign-in code to <b>' + esc(email) + '</b>';
+    codeIn.value = ''; verifyBtn.disabled = true; codeIn.focus();
+  } else loginErr.textContent = "Couldn't send the code — check the address.";
+};
+verifyBtn.onclick = async () => {
+  busy = true; verifyBtn.disabled = true; verifyBtn.textContent = 'Signing in…'; loginErr.textContent = '';
+  const email = emailIn.value.trim();
+  const r = await raw('/auth/v1/verify', { method:'POST',
+    json:{ email, token: codeIn.value.trim(), type:'email' }});
+  busy = false; verifyBtn.textContent = 'Sign in'; verifyBtn.disabled = codeIn.value.trim().length < 6;
+  if (r.code === 200 && r.data && r.data.refresh_token) {
+    S.email = email; adopt(r.data);
+    enterApp();
+  } else loginErr.textContent = "That code didn't work — try again.";
+};
+otherEmail.onclick = () => {
+  stageEmail.style.display = 'block'; stageCode.style.display = 'none';
+  codeIn.value = ''; loginErr.textContent = '';
+};
+
+/* ---- notes list ---------------------------------------------------------- */
+let notes = [], loadedOnce = false;
+function when(d){
+  if (!d) return '';
+  const now = new Date();
+  if (d.toDateString() === now.toDateString())
+    return d.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+  if (now - d < 7*86400e3) return d.toLocaleDateString([], { weekday:'short' });
+  return d.toLocaleDateString([], { month:'short', day:'numeric' });
+}
+function renderList(){
+  const q = searchIn.value.trim().toLowerCase();
+  const f = q ? notes.filter(n => n.title.toLowerCase().includes(q)
+                              || n.folder.toLowerCase().includes(q)) : notes;
+  const isToday = n => n.at && n.at.toDateString() === new Date().toDateString();
+  const today = f.filter(isToday), earlier = f.filter(n => !isToday(n));
+  let h = '';
+  if (!loadedOnce && !notes.length) h = '<div class="load-wrap"><div class="spin"></div></div>';
+  else if (!notes.length)
+    h = '<div class="center-note"><div class="a">No notes yet</div><div class="b">Notes you record on your Mac show up here.</div></div>';
+  else if (!f.length)
+    h = '<div class="center-note"><div class="b">Nothing matches your search.</div></div>';
+  else {
+    const card = rows => '<div class="card">' + rows.map(n =>
+      `<button class="row" data-id="${n.id}"><span class="doc">${I.doc}</span>` +
+      `<span class="mid"><span class="t">${esc(n.title)}</span><span class="chip">${esc(n.folder)}</span></span>` +
+      `<span class="when">${when(n.at)}</span></button>`).join('') + '</div>';
+    if (today.length)   h += '<div class="sec-h">Today</div>' + card(today);
+    if (earlier.length) h += `<div class="sec-h${today.length ? ' later' : ''}">${today.length ? 'Earlier' : 'Notes'}</div>` + card(earlier);
+  }
+  listBody.innerHTML = h;
+  fab.style.display = notes.length ? 'flex' : 'none';
+  listBody.querySelectorAll('.row').forEach(b =>
+    b.onclick = () => { const n = notes.find(x => x.id === b.dataset.id); if (n) openDetail(n); });
+}
+async function loadNotes(){
+  const got = await fetchNotes();
+  if (got !== null) notes = got;
+  loadedOnce = true;
+  renderList();
+}
+searchIn.addEventListener('input', renderList);
+refreshBtn.onclick = async () => { refreshBtn.style.opacity = .4; await loadNotes(); refreshBtn.style.opacity = ''; };
+fab.onclick = () => { if (notes[0]) openDetail(notes[0]); };
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && signedIn() && loadedOnce) loadNotes();
+});
+
+/* account menu */
+acctBtn.onclick = () => { menuEmail.textContent = SAMPLE ? 'preview@prism.app' : S.email;
+  menu.style.display = 'block'; menuVeil.style.display = 'block'; };
+function hideMenu(){ menu.style.display = 'none'; menuVeil.style.display = 'none'; }
+menuVeil.onclick = hideMenu;
+signOutBtn.onclick = signOut;
+
+/* ---- note detail ----------------------------------------------------------- */
+let cur = null, photos = [], seq = 0;
+function mdLines(text, bulletColor){
+  return text.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 60).map(s => {
+    let bullet = false, head = false;
+    if (s.startsWith('- ') || s.startsWith('* ')) { bullet = true; s = s.slice(2); }
+    else if (s.startsWith('#')) { head = true; s = s.replace(/^[# ]+/, ''); }
+    s = s.replaceAll('**', '');
+    if (head) return `<div class="mdl head">${esc(s)}</div>`;
+    return `<div class="mdl">${bullet ? `<span class="bu" style="color:${bulletColor}">•</span>` : ''}<span>${esc(s)}</span></div>`;
+  }).join('');
+}
+async function openDetail(n){
+  cur = n; photos = [];
+  dMeta.textContent = `${n.folder} · ${when(n.at)}`;
+  dTitle.textContent = n.title;
+  myCard.innerHTML = ''; prismCard.innerHTML = '';
+  renderPhotos();
+  requestAnimationFrame(() => {
+    detail.classList.add('open'); views.list.classList.add('pushed');
+  });
+  dScroll.scrollTop = 0;
+  history.pushState({ note: n.id }, '');
+  const t = await fetchNoteTexts(n.id);
+  if (cur !== n) return;
+  if (t.my.trim())
+    myCard.innerHTML = `<div class="tcard my"><div class="lrow"><span class="lab">MY NOTES</span>` +
+      `<span class="tag">from your Mac</span></div>${mdLines(t.my, '#cfcfcd')}</div>`;
+  if (t.prism.trim())
+    prismCard.innerHTML = `<div class="tcard prism"><div class="lrow">${I.spark}<span class="lab">PRISM NOTES</span></div>` +
+      `<div class="sub">Synthesized from your notes, photos &amp; the recording</div>` +
+      `${mdLines(t.prism, 'var(--prism-bullet)')}</div>`;
+}
+function closeDetail(){
+  cur = null;
+  detail.classList.remove('open'); views.list.classList.remove('pushed');
+}
+function goBack(){ if (history.state && history.state.note) history.back(); else closeDetail(); }
+backBtn.onclick = goBack; doneBtn.onclick = goBack;
+window.addEventListener('popstate', () => { if (detail.classList.contains('open')) closeDetail(); });
+
+function renderPhotos(){
+  if (!photos.length) {
+    phZone.innerHTML = `<button class="ph-empty" id="phEmptyBtn">` +
+      `<span class="cam">${I.cam(20, 1.8)}</span>` +
+      `<span class="a">Add photos from your phone</span><br>` +
+      `<span class="b">Snap the whiteboard or drop shots from your camera roll.</span></button>`;
+    document.getElementById('phEmptyBtn').onclick = () => libIn.click();
+    return;
+  }
+  phZone.innerHTML = '<div class="grid">' + photos.map(p => {
+    let badge;
+    if (p.rowId === null) badge = '<span class="busy"><span class="spin"></span></span>';
+    else if (p.rowId === '') badge = `<span class="warn">${I.warn}</span>`;
+    else badge = `<button class="x" data-k="${p.key}">${I.x}</button>`;
+    return `<div class="tile"><img src="${p.url}" alt="">${badge}</div>`;
+  }).join('') + `<button class="tile addt" id="gridAdd">${I.plus(20, 2)}Add</button></div>`;
+  document.getElementById('gridAdd').onclick = () => libIn.click();
+  phZone.querySelectorAll('.x').forEach(b => b.onclick = async () => {
+    const p = photos.find(x => x.key === +b.dataset.k);
+    if (!p || !p.rowId) return;
+    if (await removeScan(p.rowId)) {
+      URL.revokeObjectURL(p.url);
+      photos = photos.filter(x => x !== p); renderPhotos();
+    } else toast('Already added on your Mac');
+  });
+}
+async function addFiles(files){
+  const list = [...files].slice(0, 8);
+  if (!list.length || !cur) return;
+  const note = cur, batch = [];
+  for (const f of list) {
+    const blob = await exportJPEG(f);
+    if (!blob) continue;
+    const p = { key: ++seq, url: URL.createObjectURL(blob), rowId: null, blob };
+    photos.push(p); batch.push(p);
+  }
+  renderPhotos();
+  let ok = 0;
+  for (const p of batch) {
+    const rid = await uploadScan(note.id, p.blob);
+    p.rowId = rid || '';
+    delete p.blob;
+    if (rid) ok++;
+    if (cur === note) renderPhotos();
+  }
+  toast(ok === 0 ? 'Upload failed — try again' : `${ok} photo${ok === 1 ? '' : 's'} sent to your Mac`);
+}
+camBtn.onclick = () => camIn.click();
+libBtn.onclick = () => libIn.click();
+addBtn.onclick = () => libIn.click();
+camIn.onchange = () => { addFiles(camIn.files); camIn.value = ''; };
+libIn.onchange = () => { addFiles(libIn.files); libIn.value = ''; };
+
+/* ---- boot ------------------------------------------------------------------ */
+function enterApp(){ show('list'); loadedOnce = false; renderList(); loadNotes(); }
+if (signedIn()) enterApp(); else show('login');
+if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('./sw.js'); } catch {} }
+</script>
+</body>
+</html>

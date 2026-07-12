@@ -1,0 +1,14 @@
+{
+  "name": "Prism",
+  "short_name": "Prism",
+  "description": "Add photos from your phone to your Prism notes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBFBFA",
+  "theme_color": "#FBFBFA",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
