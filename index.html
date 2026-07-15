@@ -178,7 +178,7 @@ svg{display:block}
 <div class="view" id="login">
   <div class="mark" id="loginMark"></div>
   <h1>Welcome to Prism</h1>
-  <div class="sub">Sign in with the account you use on your Mac —<br>photos you add here land in your notes there.</div>
+  <div class="sub">Sign in with the account you use in Prism —<br>photos you add here land in your notes on your other devices.</div>
   <div id="stageEmail" style="width:100%;max-width:330px">
     <input class="field" id="emailIn" type="email" inputmode="email" autocomplete="email"
            autocapitalize="none" autocorrect="off" placeholder="you@example.com">
@@ -227,7 +227,7 @@ svg{display:block}
       <div id="prismBody"></div>
     </div>
     <div class="pane" id="paneMy" hidden>
-      <div class="pane-sub"><span>Synced with your Mac — Prism never edits this</span><span id="saveState"></span></div>
+      <div class="pane-sub"><span>Synced with your devices — Prism never edits this</span><span id="saveState"></span></div>
       <textarea id="myEdit" class="note-edit" spellcheck="true" disabled
         placeholder="Jot down what matters to you… Prism never edits these."></textarea>
     </div>
@@ -555,7 +555,7 @@ function renderList(){
   else if (!notes.length)
     h = loadFailed
       ? '<div class="center-note"><div class="a">Couldn’t load your notes</div><div class="b">Check your connection, then tap the refresh arrow above.</div></div>'
-      : '<div class="center-note"><div class="a">No notes yet</div><div class="b">Notes you record on your Mac show up here.</div></div>';
+      : '<div class="center-note"><div class="a">No notes yet</div><div class="b">Notes you record on your computer show up here.</div></div>';
   else if (!f.length)
     h = '<div class="center-note"><div class="b">Nothing matches your search.</div></div>';
   else {
@@ -666,7 +666,7 @@ myEdit.addEventListener('input', () => { autogrow(); setSaveState(''); queueSave
 myEdit.addEventListener('blur', saveMyNow);
 function renderPrismPane(t){
   prismBody.innerHTML = t.prism.trim() ? mdLines(t.prism)
-    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your Mac.</div>';
+    : '<div class="pane-empty">Prism notes aren’t written yet — they’re generated on your computer.</div>';
 }
 async function openDetail(n){
   if (cur && cur.id === n.id && detail.classList.contains('open')) return;  // double-tap
@@ -751,7 +751,7 @@ function renderPhotos(){
   }
   phZone.innerHTML = '<div class="grid">' + photos.map(p => {
     const x = `<button class="x" data-k="${p.key}">${I.x}</button>`;
-    if (!p.url) return `<div class="tile ghost">${x}${I.check}<span>On your Mac</span></div>`;
+    if (!p.url) return `<div class="tile ghost">${x}${I.check}<span>On your computer</span></div>`;
     let badge = x;
     if (p.rowId === null) badge = '<span class="busy"><span class="spin"></span></span>';
     else if (p.rowId === '') badge = `<span class="warn" style="right:auto;left:6px">${I.warn}</span>${x}`;
@@ -768,11 +768,11 @@ function renderPhotos(){
       return;
     }
     if (!p.rowId) return;
-    if (p.claimed && !confirm('This photo is already in the note on your Mac — delete it there too?')) return;
+    if (p.claimed && !confirm('This photo is already in the note on your computer — delete it there too?')) return;
     if (await removeScan(p.rowId)) {
       if (p.url) URL.revokeObjectURL(p.url);
       photos = photos.filter(x => x !== p); renderPhotos();
-      if (p.claimed) toast('Removed — your Mac will update shortly');
+      if (p.claimed) toast('Removed — your devices will update shortly');
     } else toast("Couldn't remove — try again");
   });
 }
@@ -799,7 +799,7 @@ async function addFiles(files){
       renderPhotos();
     }
   }
-  toast(ok === 0 ? 'Upload failed — try again' : `${ok} photo${ok === 1 ? '' : 's'} sent to your Mac`);
+  toast(ok === 0 ? 'Upload failed — try again' : `${ok} photo${ok === 1 ? '' : 's'} sent to your devices`);
 }
 addBtn.onclick = () => libIn.click();
 camBtn.onclick = () => camIn.click();
