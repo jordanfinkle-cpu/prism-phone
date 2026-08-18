@@ -219,7 +219,7 @@ svg{display:block}
     <div class="d-meta" id="dMeta"></div>
     <div class="d-title" id="dTitle"></div>
     <div class="ntabs">
-      <button class="ntab on" id="tabPrism"><svg viewBox="0 0 24 24"><path d="M12 4.4 20.4 18.9H3.6z" fill="currentColor" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/></svg>Prism notes</button>
+      <button class="ntab on" id="tabPrism"><svg viewBox="0 0 1000 1000"><g fill="currentColor"><path d="M194.176 98.717L98.717 194.176L337.041 432.5L0 432.5L0 567.5L337.041 567.5L98.717 805.824L194.176 901.283L565.195 530.264A42.8 42.8 0 0 0 565.195 469.736Z"/><path d="M583.014 321.526L648.21 386.721A160.2 160.2 0 0 1 674.356 421.103L901.283 194.176L805.824 98.7169Z"/><path d="M583.014 678.474L805.824 901.283L901.283 805.824L674.356 578.897A160.2 160.2 0 0 1 648.21 613.279Z"/><path d="M1000 567.5L1000 432.5L680.216 432.5A160.2 160.2 0 0 1 680.216 567.5Z"/><path d="M432.5 0L432.5 171.012L567.5 306.012L567.5 0Z"/><path d="M567.5 693.988L432.5 828.988L432.5 1000L567.5 1000Z"/></g></svg>Prism notes</button>
       <button class="ntab" id="tabMy">My notes</button>
     </div>
     <div class="pane" id="panePrism">
@@ -257,7 +257,7 @@ const SAMPLE = new URLSearchParams(location.search).get('sample') === '1';
 
 /* ---- inline SF-style icons ------------------------------------------ */
 const I = {
-  mark : s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="#1A1A19"><path d="M12 3.6c.62 0 1.19.33 1.5.87l7.55 13.06c.62 1.07-.15 2.41-1.39 2.41H4.34c-1.24 0-2.01-1.34-1.39-2.41L10.5 4.47c.31-.54.88-.87 1.5-.87z"/></svg>`,
+  mark : s => `<svg width="${s}" height="${s}" viewBox="0 0 1000 1000" fill="#1A1A19"><path d="M194.176 98.717L98.717 194.176L337.041 432.5L0 432.5L0 567.5L337.041 567.5L98.717 805.824L194.176 901.283L565.195 530.264A42.8 42.8 0 0 0 565.195 469.736Z"/><path d="M583.014 321.526L648.21 386.721A160.2 160.2 0 0 1 674.356 421.103L901.283 194.176L805.824 98.7169Z"/><path d="M583.014 678.474L805.824 901.283L901.283 805.824L674.356 578.897A160.2 160.2 0 0 1 648.21 613.279Z"/><path d="M1000 567.5L1000 432.5L680.216 432.5A160.2 160.2 0 0 1 680.216 567.5Z"/><path d="M432.5 0L432.5 171.012L567.5 306.012L567.5 0Z"/><path d="M567.5 693.988L432.5 828.988L432.5 1000L567.5 1000Z"/></svg>`,
   mag  : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2 20 20"/></svg>`,
   person:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="10" r="3.1"/><path d="M5.8 18.6c1.1-2.6 3.4-4 6.2-4s5.1 1.4 6.2 4" stroke-linecap="round"/></svg>`,
   refresh:`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5A8.1 8.1 0 0 0 5.6 7.4L4 9.2"/><path d="M4 4.8v4.4h4.4"/><path d="M4 12.5a8.1 8.1 0 0 0 14.4 4.1l1.6-1.8"/><path d="M20 19.2v-4.4h-4.4"/></svg>`,
